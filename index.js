@@ -7,7 +7,7 @@ app.get('/', (req, res) => {
   try {
     const data = fs.readFileSync('gps.txt', 'utf8');
     const [lat, lon] = data.split(',');
-    res.redirect(https://www.windy.com/?\( {lat.trim()}, \){lon.trim()});
+    res.redirect(`https://www.windy.com/?\( {lat.trim()}, \){lon.trim()}`);
   } catch (err) {
     res.send('Координат пока нет. Подожди, пока роутер пришлёт данные.');
   }
