@@ -1,36 +1,38 @@
+
 const express = require('express');
-const fs = require('fs');
 const app = express();
+const port = process.env.PORT || 10000;
 
-// Главная страница — редирект на Windy с координатами
-app.get('/', (req, res) => {
-  try {
-    const data = fs.readFileSync('gps.txt', 'utf8').trim();
-    const [lat, lon] = data.split(',').map(part => part.trim());
-    const windyUrl = `https://www.windy.com/?\( {lat}, \){lon}`;
-    res.redirect(windyUrl);
-  } catch (err) {
-    res.send('Координат пока нет. Роутер должен прислать данные (проверь GPS и HTTP настройки).');
-  }
-});
+let currentLat = null;
+let currentLon = null;
 
-
-// Приём координат от роутера
+// Новый маршрут для обновления координат от Teltonika
 app.get('/update', (req, res) => {
-  const lat = req.query.lat;
-  const lon = req.query.lon;
-  if (lat && lon) {
-    const cleanedLat = lat.trim();
-    const cleanedLon = lon.trim();
-    fs.writeFileSync('gps.txt', `\( {cleanedLat}, \){cleanedLon}`);
-    res.send(`OK — сохранены координаты: ${cleanedLat}, ${cleanedLon}`);
-  } else {
-    res.send('Ошибка: параметры lat и/или lon отсутствуют');
-  }
+    const lat = req.query.lat;  // Берёт lat из URL (?lat=...)
+    const lon = req.query.lon;  // Берёт lon из URL (?lon=...)
+
+    if (lat && lon) {
+        currentLat = parseFloat(lat);  // Сохраняет широту как число
+        currentLon = parseFloat(lon);  // Сохраняет долготу как число
+        console.log(`Обновлены 
+
+координаты: lat=\( {currentLat}, lon= \){currentLon}`);  // Пишет в логи для проверки
+        res.send('Координаты обновлены успешно!');  // Ответ Teltonika, чтобы считалось успешным
+    } else {
+        res.send('Ошибка: нет lat или lon в запросе.');  // Если параметры не пришли
+    }
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
+// Главная страница
+app.get('/', (req, res) => {
+    if (currentLat !== null && currentLon !== null) {
+        res.redirect(`https://www.windy.com/\( {currentLat}, \){currentLon}?\( {currentLat}, \){currentLon},8`);  // Перенаправляет на Windy с зумом 8
+    } else {
 
-  console.log(`Сервер запущен на порту ${port}`);
+        res.send('Координат пока нет. Роутер должен прислать данные (проверь GPS и HTTP настройки).');
+    }
+});
+
+app.listen(port, () => {
+    console.log(`Сервер запущен на порту ${port}`);
 });
